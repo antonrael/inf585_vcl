@@ -22,7 +22,7 @@ void scene_model::setup_data(std::map<std::string, GLuint> &shaders, scene_struc
         {
 
             water.position.push_back(vec3(i * 0.005f, 1.0f, j * 0.005f));
-            water.color.push_back(vec4(0.0f, 0.0f, 1.0f, 0.5f));
+            water.color.push_back(vec4(0.6f, 0.6f, 1.0f, 0.0f));
         }
     }
 
@@ -49,7 +49,7 @@ void scene_model::setup_data(std::map<std::string, GLuint> &shaders, scene_struc
         {
 
             water.position.push_back(vec3(i * 0.005f, 0.0f, j * 0.005f));
-            water.color.push_back(vec4(0.0f, 0.0f, 1.0f, 0.5f));
+            water.color.push_back(vec4(0.3f, 0.3f, 1.0f, 0.0f));
         }
     }
 
@@ -70,13 +70,21 @@ void scene_model::setup_data(std::map<std::string, GLuint> &shaders, scene_struc
         }
     }
 
-    for (uint j = 0; j < n_water; j++)
+    for (uint j = 0; j < n_water - 1; j++)
     {
-        if (j < n_water-1)
-        {
-            water.connectivity.push_back({j, j+1, n_water * n_water + j});
-            water.connectivity.push_back({j + n_water*(n_water-1), j+1 + n_water*(n_water-1), n_water * n_water + j + n_water*(n_water-1) });
-        }
+        water.connectivity.push_back({j, j + 1, n_water * n_water + j});
+        water.connectivity.push_back({j + n_water * (n_water - 1), j + 1 + n_water * (n_water - 1), n_water * n_water + j + n_water * (n_water - 1)});
+        water.connectivity.push_back({j + 1, n_water * n_water + j + 1, n_water * n_water + j});
+        water.connectivity.push_back({j + 1 + n_water * (n_water - 1), n_water * n_water + j + 1 + n_water * (n_water - 1), n_water * n_water + j + n_water * (n_water - 1)});
+    }
+
+    for (uint i = 0; i < n_water - 1; i++)
+    {
+        water.connectivity.push_back({i * n_water, (i + 1) * n_water, n_water * n_water + i * n_water});
+        water.connectivity.push_back({i * n_water + n_water - 1, (i + 1) * n_water + n_water - 1, n_water * n_water + i * n_water + n_water - 1});
+
+        water.connectivity.push_back({(i + 1) * n_water, (i + 1) * n_water + n_water * n_water, n_water * n_water + i * n_water});
+        water.connectivity.push_back({(i + 1) * n_water + n_water - 1, (i + 1) * n_water + n_water * n_water + n_water - 1, n_water * n_water + i * n_water + n_water - 1});
     }
 
     normal(water.position, water.connectivity, water.normal);
@@ -98,7 +106,7 @@ void scene_model::compute_time_step(float dt)
             float x = 0.02 * i;
             float y = 0.02 * j;
             //std::cout << x << " " << y << std::endl;
-            float t = 0.5 * timer.t;
+            float t = timer.t;
             water.position[k][1] = 1.0f + 0.05 * perlin(x, y, t, 2, 0.3);
         }
     }
