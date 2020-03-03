@@ -27,6 +27,9 @@ struct scene_model : scene_base
     vcl::mesh water;
     vcl::mesh_drawable water_draw;
 
+    vcl::mesh glass;
+    vcl::mesh_drawable glass_draw;
+
 
     vcl::timer_event timer;
     gui_scene_structure gui_scene;
