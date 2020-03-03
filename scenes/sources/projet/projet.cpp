@@ -60,16 +60,24 @@ void scene_model::setup_data(std::map<std::string, GLuint> &shaders, scene_struc
 
             if (i > 0 && j > 0)
             {
-                water.connectivity.push_back({n_water*n_water + i * n_water + j,n_water*n_water + (i - 1) * n_water + j,n_water*n_water + i * n_water + j - 1});
+                water.connectivity.push_back({n_water * n_water + i * n_water + j, n_water * n_water + (i - 1) * n_water + j, n_water * n_water + i * n_water + j - 1});
             }
 
             if (i < n_water - 1 && j < n_water - 1)
             {
-                water.connectivity.push_back({n_water*n_water +i * n_water + j,n_water*n_water + (i + 1) * n_water + j,n_water*n_water + i * n_water + j + 1});
+                water.connectivity.push_back({n_water * n_water + i * n_water + j, n_water * n_water + (i + 1) * n_water + j, n_water * n_water + i * n_water + j + 1});
             }
         }
     }
 
+    for (uint j = 0; j < n_water; j++)
+    {
+        if (j < n_water-1)
+        {
+            water.connectivity.push_back({j, j+1, n_water * n_water + j});
+            water.connectivity.push_back({j + n_water*(n_water-1), j+1 + n_water*(n_water-1), n_water * n_water + j + n_water*(n_water-1) });
+        }
+    }
 
     normal(water.position, water.connectivity, water.normal);
 
@@ -79,19 +87,19 @@ void scene_model::setup_data(std::map<std::string, GLuint> &shaders, scene_struc
 void scene_model::compute_time_step(float dt)
 {
 
-    int n_water = std::sqrt(water.position.size()/2);
+    int n_water = std::sqrt(water.position.size() / 2);
 
     for (size_t i = 0; i < n_water; ++i)
     {
 
         for (size_t j = 0; j < n_water; ++j)
         {
-            int k = i*n_water + j;
+            int k = i * n_water + j;
             float x = 0.02 * i;
             float y = 0.02 * j;
             //std::cout << x << " " << y << std::endl;
             float t = 0.5 * timer.t;
-            water.position[k][1] = 1.0f + 0.05 * perlin(x, y, t, 2,0.3);
+            water.position[k][1] = 1.0f + 0.05 * perlin(x, y, t, 2, 0.3);
         }
     }
 
