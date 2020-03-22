@@ -10,6 +10,8 @@ mesh scene_model::create_water(int n_water)
 {
 	mesh water;
 
+	//Surface vertices
+
 	for (int i = 0; i < n_water; i++)
 	{
 		for (int j = 0; j < n_water; j++)
@@ -19,6 +21,8 @@ mesh scene_model::create_water(int n_water)
 			water.color.push_back(vec4(0.5f, 0.5f, 1.0f, 1.0f));
 		}
 	}
+
+	//Surface connectivity
 
 	for (std::uint32_t i = 0; i < n_water; i++)
 	{
@@ -37,6 +41,8 @@ mesh scene_model::create_water(int n_water)
 		}
 	}
 
+	//Ground vertices
+
 	for (int i = 0; i < n_water; i++)
 	{
 		for (int j = 0; j < n_water; j++)
@@ -46,6 +52,8 @@ mesh scene_model::create_water(int n_water)
 			water.color.push_back(vec4(0.3f, 0.3f, 1.0f, 1.0f));
 		}
 	}
+
+	//Ground connectivity
 
 	for (std::uint32_t i = 0; i < n_water; i++)
 	{
@@ -63,6 +71,8 @@ mesh scene_model::create_water(int n_water)
 			}
 		}
 	}
+
+	//Borders connectivity
 
 	for (std::uint32_t j = 0; j < n_water - 1; j++)
 	{
@@ -91,6 +101,8 @@ mesh scene_model::create_sand(int n_sand)
 
 	mesh sand;
 
+	//Surface vertices and texture ids
+
 	for (int i = 0; i < n_sand; i++)
 	{
 		for (int j = 0; j < n_sand; j++)
@@ -100,6 +112,8 @@ mesh scene_model::create_sand(int n_sand)
 			sand.texture_uv.push_back({ float(i * 0.02), float(j * 0.02) });
 		}
 	}
+
+	//Surface connectivity
 
 	for (std::uint32_t i = 0; i < n_sand; i++)
 	{
@@ -118,6 +132,8 @@ mesh scene_model::create_sand(int n_sand)
 		}
 	}
 
+	// Ground vertices and texture ids
+
 	for (int i = 0; i < n_sand; i++)
 	{
 		for (int j = 0; j < n_sand; j++)
@@ -128,6 +144,8 @@ mesh scene_model::create_sand(int n_sand)
 			sand.texture_uv.push_back({ float((i + 5) * 0.02), float((j - 5) * 0.02) });
 		}
 	}
+
+	// Ground connectivity
 
 	for (std::uint32_t i = 0; i < n_sand; i++)
 	{
@@ -145,6 +163,8 @@ mesh scene_model::create_sand(int n_sand)
 			}
 		}
 	}
+
+	// Borders connectivity
 
 	for (std::uint32_t j = 0; j < n_sand - 1; j++)
 	{
@@ -171,24 +191,31 @@ mesh scene_model::create_sand(int n_sand)
 buffer<vcl::mesh> scene_model::create_seaweeds(int nb_seaweeds, std::uint32_t size_seaweed)
 {
 
+	//Initialize the buffer and the distribution
 	buffer<vcl::mesh> seaweeds;
 
 	std::default_random_engine generator;
 	std::uniform_real_distribution<double> distribution(-0.9, 0.9);
 
+	//General parameters
 	double height = 0.5f;
 	double width = 0.006f;
 
+	//Iteration over the number of seaweeds
 	for (size_t i = 0; i < nb_seaweeds; i++)
 	{
+		
+		//Initialize random variables (position and dimensions)
 
 		double delta_height = 0.1 * distribution(generator);
 		float posx = distribution(generator);
 		float posz = distribution(generator);
 		double delta_width = 0.00 * distribution(generator);
 
+		//Initialize the seaweed
 		mesh shape;
 
+		//Push the vertices positions
 		for (int i = 0; i < size_seaweed + 1; i++)
 		{
 
@@ -198,6 +225,7 @@ buffer<vcl::mesh> scene_model::create_seaweeds(int nb_seaweeds, std::uint32_t si
 			shape.position.push_back({ posx + static_cast<float>(width + delta_width), static_cast<float>(((float)i / (float)size_seaweed) * (float)(height + delta_height) + 0.04f), posz });
 		}
 
+		//Connect the vertices
 		for (std::uint32_t i = 0; i < size_seaweed; i++)
 		{
 
@@ -225,6 +253,7 @@ buffer<vcl::mesh> scene_model::create_seaweeds(int nb_seaweeds, std::uint32_t si
 
 mesh_drawable scene_model::create_glass(vec3 p0, vec3 u0, vec3 u1, vec3 u2)
 {
+	//Create a parallepiped and initialize its behaviour with color and light
 
 	mesh_drawable glass = mesh_drawable(mesh_primitive_parallelepiped(p0, u0, u1, u2));
 	glass.uniform.color_alpha = 0.05f;
@@ -280,7 +309,7 @@ void scene_model::setup_data(std::map<std::string, GLuint>& shaders, scene_struc
 
 	seaweeds = create_seaweeds(nb_seaweeds, size_seaweed);
 
-	// Init seaweeds data (speed, force)
+	// Init seaweeds data (default position, speed, force)
 
 	initial_positions_seaweeds.resize(nb_seaweeds);
 	for (int i = 0; i < nb_seaweeds; i++)
@@ -317,7 +346,7 @@ void scene_model::setup_data(std::map<std::string, GLuint>& shaders, scene_struc
 
 	//Textures
 
-	texture_sand = create_texture_gpu(image_load_png("scenes/sources/default/animation/assets/rocks.png"));
+	texture_sand = create_texture_gpu(image_load_png("scenes/sources/projet/textures/rocks.png"));
 
 	sphere = mesh_drawable(mesh_primitive_sphere(1.0f));
 	sphere.shader = shaders["mesh"];
@@ -337,6 +366,8 @@ void scene_model::update_water(float dt)
 {
 
 	int n_water = std::sqrt(water.position.size() / 2);
+
+	// Iterate over the surface vertices and adds perlin noise
 
 	for (size_t i = 0; i < n_water; ++i)
 	{
@@ -371,6 +402,7 @@ void scene_model::compute_forces_seaweeds(int number_of_seaweeds, int size_seawe
 {
 
 	// Get simuation parameters
+
 	const float K = 3.5f; // /!\ Divergence if too high ! No more than 4.f
 	const float Krigid = 20.f;
 	const float m = 0.01f / (4 * size_seaweed);
@@ -378,7 +410,7 @@ void scene_model::compute_forces_seaweeds(int number_of_seaweeds, int size_seawe
 	const float rand_wind_prop = 0.3;
 	const float mu = 0.0f;
 
-	// Reset
+	// Reset the forces
 
 	for (size_t k = 0; k < number_of_seaweeds; k++)
 	{
@@ -569,11 +601,13 @@ void scene_model::update_seaweeds(int nb_seaweeds, int size_seaweed, float dt)
 	for (size_t i = 0; i < nb_seaweeds; ++i)
 	{
 
-		for (size_t j = 12; j < 4 * (size_seaweed + 1); ++j)
+		for (size_t j = 12; j < 4 * (size_seaweed + 1); ++j) //We begin at j = 12 to keep the bottom vertices at their initial position
 		{
 			vec3& p = seaweeds[i].position[j];
 			vec3& v = speeds_seaweeds[i][j];
 			const vec3& f = forces_seaweeds[i][j];
+
+			//Semi-implicit integration
 
 			v = v + dt * f / m;
 			if (norm(v) > 0.01)
@@ -598,14 +632,21 @@ void scene_model::frame_draw(std::map<std::string, GLuint>& shaders, scene_struc
 	if (!(timer.update() > 0))
 		dt = 0;
 
+
+	//Display Fishes
+
 	if (f)
 	{
 
 		display_fish(shaders,scene);
 	}
 
+	//Update Seaweeds
+
 	compute_forces_seaweeds(nb_seaweeds, size_seaweed);
 	update_seaweeds(nb_seaweeds, size_seaweed, dt);
+
+	//Display Seaweeds
 
 	if (sw)
 	{
@@ -617,6 +658,8 @@ void scene_model::frame_draw(std::map<std::string, GLuint>& shaders, scene_struc
 				draw(seaweeds_draw[i], scene.camera, shaders["wireframe"]);
 		}
 	}
+
+	//Display Sand
 
 	if (s)
 	{
@@ -631,15 +674,26 @@ void scene_model::frame_draw(std::map<std::string, GLuint>& shaders, scene_struc
 			draw(sand_draw, scene.camera, shaders["wireframe"]);
 	}
 
+
+	//Put back default texture
+
 	glBindTexture(GL_TEXTURE_2D, scene.texture_white);
 
+	// Set GUI
 	set_gui();
+
+	// Update water and fishes
 	update_water(dt);
 	compute_time_step_fishes(dt);
+
 	timer.t += dt;
+
+	//Enables transparency parameters
 	glEnable(GL_BLEND);
 	glDepthMask(false);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	//Display glass parts
 
 	if (g)
 	{
@@ -665,12 +719,16 @@ void scene_model::frame_draw(std::map<std::string, GLuint>& shaders, scene_struc
 			draw(glass_bottom, scene.camera, shaders["wireframe"]);
 	}
 
+	//Display water
+
 	if (w)
 	{
 		draw(water_draw, scene.camera);
 		if (gui_scene.wireframe)
 			draw(water_draw, scene.camera, shaders["wireframe"]);
 	}
+
+	// Stop transparency
 
 	glDepthMask(true);
 }
