@@ -275,18 +275,6 @@ void scene_model::setup_data(std::map<std::string, GLuint>& shaders, scene_struc
 	glass_right = create_glass({ 1, -0.05, -1.05 }, { 0.05, 0, 0 }, { 0, 1.25, 0 }, { 0, 0, 2.1 });
 	glass_bottom = create_glass({ -1.05, -0.05, -1.05 }, { 2.1, 0, 0 }, { 0, 0.05, 0 }, { 0, 0, 2.1 });
 
-	//Test cube
-
-	cube = mesh_drawable(mesh_primitive_parallelepiped());
-
-	cube.shader = shaders["mesh"];
-	cube.uniform.color_alpha = 1.0f;
-	cube.uniform.color = vec3(1.0f, 0.0f, 0.0f);
-	cube.uniform.shading.specular = 0.8f;
-	cube.uniform.shading.ambiant = 0.5f;
-	cube.uniform.shading.diffuse = 0.8f;
-	cube.uniform.transform.scaling = 0.3f;
-	cube.uniform.transform.translation = { 0, 0.5, 0.5 };
 
 	//Seaweeds
 
@@ -335,8 +323,11 @@ void scene_model::setup_data(std::map<std::string, GLuint>& shaders, scene_struc
 	sphere.shader = shaders["mesh"];
 
 	//Fishes
+
+	//initialize position and speed of the fishes
 	init_fishes();
 
+	// create the hierarchical structures of the fishes
 	for (int i = 0; i < N_fishes; i++) {
 		hierarchy_fishes.push_back(create_fish(shaders));
 	}
@@ -607,13 +598,6 @@ void scene_model::frame_draw(std::map<std::string, GLuint>& shaders, scene_struc
 	if (!(timer.update() > 0))
 		dt = 0;
 
-	if (c)
-	{
-		draw(cube, scene.camera);
-		if (gui_scene.wireframe)
-			draw(cube, scene.camera, shaders["wireframe"]);
-	}
-
 	if (f)
 	{
 
@@ -696,7 +680,6 @@ void scene_model::set_gui()
 	ImGui::Checkbox("Wireframe", &gui_scene.wireframe);
 	ImGui::Checkbox("Water", &w);
 	ImGui::Checkbox("Glass", &g);
-	ImGui::Checkbox("Cube", &c);
 	ImGui::Checkbox("Fish", &f);
 	ImGui::Checkbox("Sand", &s);
 	ImGui::Checkbox("Seaweeds", &sw);
@@ -707,18 +690,21 @@ void scene_model::init_fishes() {
 	for (size_t k = 0; k < N_fishes; k++) {
 		particle_structure fish;
 
-		// Initial position
+
+		// Initial random position
 		float x = rand_interval(0, 0.5);
 		float y = rand_interval(0, 0.5);
 		float z = rand_interval(0, 0.5);
 		fish.p = vec3(x, y, z);
 		std::cout << fish.p << std::endl;
 
-		// Initial speed
+		// Initial random speed
 		float vx = rand_interval(0, 1);
 		float vy = rand_interval(0, 1);
 		float vz = rand_interval(0, 1);
 		fish.v = vec3(vx, vy, vz);
+
+		// no forces at the beginning
 		fish.f = vec3(0, 0, 0);
 
 		fishes.push_back(fish);
@@ -727,7 +713,7 @@ void scene_model::init_fishes() {
 
 }
 
-
+//function f for the first Boids model we tried (not used in the final version)
 float f(float x) {
 	//return 0 if too long
 	float r = 3.0;
@@ -748,6 +734,8 @@ void scene_model::compute_time_step_fishes(float dt)
 {
 	// Set forces
 	const size_t N = fishes.size();
+
+	//first tried model (not used)
 	/*
 	for (size_t k = 0; k < N; ++k) {
 		//frottement fluide
@@ -766,10 +754,16 @@ void scene_model::compute_time_step_fishes(float dt)
 
 	}
 	*/
+
+	//definition of the zone for each rule of the Boids model
 	float rsep = 0.5;
 	float ralign = 1.0;
 	float rcohez = 2.0;
+
+	//maximal speed
 	float vmax = 5.0f;
+
+	//add boid speed for each fish
 	for (size_t k = 0; k < N; ++k) {
 		vec3 vsep = { 0,0,0 };
 		vec3 valign = { 0,0,0 };
@@ -818,22 +812,28 @@ void scene_model::compute_time_step_fishes(float dt)
 			vcohez = vcohez / ncohez;
 		}
 
+		//coefficients for the importance of each effect of the Boids model
 		float alpha_sep = 0.05;
 		float alpha_align = 0.01;
 		float alpha_cohez = 0.01;
+
+
+		//add to the speed
 		v += alpha_sep * vsep + alpha_align * valign + alpha_align * vcohez;
+
+		//set a maximal norm to avoid divergence
 		if (norm(v) > vmax) {
 			v = v * vmax / norm(v);
 		}
 
-		//perturbation aleatoire
+		//random distrubance
 		float alpha_alea = 0.05;
 		float vx = rand_interval(-1, 1);
 		float vy = rand_interval(-1, 1);
 		float vz = rand_interval(-1, 1);
 		fish.v += alpha_alea * vec3(vx, vy, vz);
 
-		//force repulsive bords :
+		//repuslive force on the edges of the aquarium
 		float drepuls = 0.2f;
 		float frepuls = 100.0f;
 		vec3 force_repuls = { 0,0,0 };
@@ -855,6 +855,8 @@ void scene_model::compute_time_step_fishes(float dt)
 		if (p.z < -1 + drepuls) {
 			force_repuls += vec3(0, 0, 1);
 		}
+
+		//zero if the fish moves away from the edge
 		float valeur = -dot(force_repuls, fish.v) / norm(fish.v);
 
 		if (valeur > 0) {
@@ -911,11 +913,13 @@ void scene_model::compute_time_step_fishes(float dt)
 
 }
 
+
+//create the structure hierarchy of the fish
 hierarchy_mesh_drawable scene_model::create_fish(std::map<std::string, GLuint>& shaders)
 {
 	hierarchy_mesh_drawable hierarchy;
-	float r = rand_interval(0.02f,0.03f);
-	float vert = rand_interval(0.0f, 1.0f);
+	float r = rand_interval(0.02f,0.03f); //to have fishes of different sizes
+	float vert = rand_interval(0.0f, 1.0f); //to have fishes of different colors from yellow to red
 	vec3 c = { 1.0f,vert,0 };
 
 	mesh fish_body = mesh_primitive_sphere(r);
@@ -955,6 +959,7 @@ hierarchy_mesh_drawable scene_model::create_fish(std::map<std::string, GLuint>& 
 	return hierarchy;
 }
 
+//to animate and display the fishes
 void scene_model::display_fish(std::map<std::string, GLuint>& shaders, scene_structure& scene)
 {
 
@@ -964,20 +969,24 @@ void scene_model::display_fish(std::map<std::string, GLuint>& shaders, scene_str
 	{
 		const particle_structure& part = fishes[k];
 
-		const float theta = std::cos(3 * 3.14f * timer.t + k);
+		const float theta = std::cos(3 * 3.14f * timer.t + k); //k : phase to have a different movement between the fishes
+
+		//rotation of the lateral fin
 		affine_transform& local_finL = hierarchy_fishes[k]["finL"].transform;
 		local_finL.rotation = rotation_from_axis_angle_mat3({ 1, 0, 0 }, theta);
 
 		affine_transform& local_finR = hierarchy_fishes[k]["finR"].transform;
 		local_finR.rotation = rotation_from_axis_angle_mat3({ 1, 0, 0 }, -theta);
 
+		//rotation of the tail
 		affine_transform& local_tail = hierarchy_fishes[k]["tail"].transform;
 		local_tail.rotation = rotation_from_axis_angle_mat3({ 0, 1, 0 }, theta / 3.0f) * rotation_from_axis_angle_mat3({ 1, 0, 0 }, theta);
 
-
+		//translation of the body
 		affine_transform& local_body = hierarchy_fishes[k]["body"].transform;
 		local_body.translation = part.p;
 
+		//global orientation of the body in the direction of the speed
 		if (norm(part.v) > 0) {
 			vec3 vit = part.v / norm(part.v);
 			local_body.rotation = rotation_between_vector_mat3({ 1,0,0 }, vit);
